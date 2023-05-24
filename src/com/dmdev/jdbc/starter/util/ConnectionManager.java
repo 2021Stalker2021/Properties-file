@@ -32,16 +32,16 @@ public final class ConnectionManager {
 
     private static void initConnectionPool() {
         var poolSize = PropertiesUtil.get(POOL_SIZE_KEY);
-        var size = poolSize == null ? DEFAULT_POOL_SIZE : Integer.parseInt(poolSize);
+        var size = poolSize == null ? DEFAULT_POOL_SIZE : Integer.parseInt(poolSize); // устанавливаем дефолтное знач. poolSize потому что оно может не проинициализироваться.
         pool = new ArrayBlockingQueue<>(size);
         sourceConnections = new ArrayList<>(size);
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) { // добавляем столько соединений, сколько нам требуется.
             var connection = open();
             var proxyConnection = (Connection)
                     Proxy.newProxyInstance(ConnectionManager.class.getClassLoader(), new Class[]{Connection.class},
                             (proxy, method, args) -> method.getName().equals("close")
-                                    ? pool.add((Connection) proxy)
-                                    : method.invoke(connection, args));
+                                    ? pool.add((Connection) proxy) // возвращаем соединение
+                                    : method.invoke(connection, args)); // иначе продолжаем выполнение нашего метода
             pool.add(proxyConnection);
             sourceConnections.add(connection);
         }
@@ -55,7 +55,7 @@ public final class ConnectionManager {
         }
     }
 
-    public static Connection get() {
+    public static Connection get() { // Метод возвращает соединение.
         try {
             return pool.take(); // возвращает соединение если оно есть. Если пулл пустой, он ждёт.
         } catch (InterruptedException e) {
@@ -63,7 +63,7 @@ public final class ConnectionManager {
         }
     }
 
-    private static Connection open() {
+    private static Connection open() { // делаем закрытый open метод чтобы никто не мог открыть соединение.
         try {
             return DriverManager.getConnection(
                     PropertiesUtil.get(URL_KEY),
